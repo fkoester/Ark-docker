@@ -13,7 +13,7 @@ function stop {
 		echo "[Backup on stop]"
 		arkmanager backup
 	fi
-	if [ ${WARNONSTOP} -eq 1 ];then 
+	if [ ${WARNONSTOP} -eq 1 ];then
 	    arkmanager stop --warn
 	else
 	    arkmanager stop
@@ -42,7 +42,7 @@ cp /home/steam/crontab /ark/template/crontab
 
 
 
-if [ ! -d /ark/server  ] || [ ! -f /ark/server/arkversion ];then 
+if [ ! -d /ark/server  ] || [ ! -f /ark/server/arkversion ];then
 	echo "No game files found. Installing..."
 	mkdir -p /ark/server/ShooterGame/Saved/SavedArks
 	mkdir -p /ark/server/ShooterGame/Content/Mods
@@ -52,7 +52,7 @@ if [ ! -d /ark/server  ] || [ ! -f /ark/server/arkversion ];then
 	# Create mod dir
 else
 
-	if [ ${BACKUPONSTART} -eq 1 ] && [ "$(ls -A server/ShooterGame/Saved/SavedArks/)" ]; then 
+	if [ ${BACKUPONSTART} -eq 1 ] && [ "$(ls -A server/ShooterGame/Saved/SavedArks/)" ]; then
 		echo "[Backup]"
 		arkmanager backup
 	fi
@@ -78,11 +78,17 @@ else
 	arkmanager start
 fi
 
+asyncRun() {
+	echo "Waiting..."
+	read < /tmp/FIFO &
+	pid="$!"
+	trap "echo 'Stopping PID $pid'; kill -SIGTERM $pid" SIGINT SIGTERM
 
-# Stop server in case of signal INT or TERM
-echo "Waiting..."
-trap stop INT
-trap stop TERM
+	# A signal emitted while waiting will make the wait command return code > 128
+  # Let's wrap it in a loop that doesn't end before the process is indeed stopped
+  while kill -0 $pid > /dev/null 2>&1; do
+      wait
+  done
+}
 
-read < /tmp/FIFO &
-wait
+asyncRun
